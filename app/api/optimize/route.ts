@@ -11,12 +11,16 @@ interface AIResponse {
 }
 
 async function callOpenRouter(prompt: string, model: string): Promise<string> {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('OPENROUTER_API_KEY is not configured')
+  }
+
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'http://localhost:3000',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_API_URL || 'https://youtube-optimizer.vercel.app',
       'X-Title': 'YouTube Optimizer',
     },
     body: JSON.stringify({
@@ -163,8 +167,14 @@ Return only a JSON array of tag strings (no hashtags, just words/phrases).`,
     })
   } catch (error) {
     console.error('Optimization error:', error)
+    
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate optimization'
+    
     return NextResponse.json(
-      { error: 'Failed to generate optimization' },
+      { 
+        error: errorMessage,
+        details: 'Please check that OPENROUTER_API_KEY is set and you have credits in your account'
+      },
       { status: 500 }
     )
   }
