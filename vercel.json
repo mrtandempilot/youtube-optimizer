@@ -1,0 +1,18 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ],
+  "env": {
+    "OPENROUTER_API_KEY": "@openrouter_api_key",
+    "YOUTUBE_API_KEY": "@youtube_api_key",
+    "YOUTUBE_CLIENT_ID": "@youtube_client_id",
+    "YOUTUBE_CLIENT_SECRET": "@youtube_client_secret"
+  }
+}
