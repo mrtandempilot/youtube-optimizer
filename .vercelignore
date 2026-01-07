@@ -1,0 +1,10 @@
+# Ignore server folder (deployed separately)
+server/
+
+# Ignore local env files
+.env
+.env*.local
+
+# Ignore development files
+*.log
+.DS_Store
