@@ -27,6 +27,7 @@ export default function Home() {
     if (!topic.trim()) return
 
     setLoading(true)
+    setResult(null) // Clear previous results
     try {
       const response = await fetch('/api/optimize', {
         method: 'POST',
@@ -34,10 +35,17 @@ export default function Home() {
         body: JSON.stringify({ topic, videoUrl }),
       })
       const data = await response.json()
+      
+      // Check if API returned an error
+      if (!response.ok || data.error) {
+        throw new Error(data.error || data.details || 'Failed to generate optimization')
+      }
+      
       setResult(data)
     } catch (error) {
       console.error('Optimization failed:', error)
-      alert('Failed to optimize. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to optimize'
+      alert(`Error: ${errorMessage}\n\nPlease make sure your OPENROUTER_API_KEY is set in Vercel environment variables and you have credits.`)
     } finally {
       setLoading(false)
     }
