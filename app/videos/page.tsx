@@ -89,10 +89,11 @@ export default function VideosPage() {
         setVideos(transformedData)
 
         // Automatically fetch ranks and stats for all videos
-        transformedData.forEach(video => {
-          fetchRankForVideo(video.videoId, video.currentTitle)
-          fetchVideoStats(video.videoId)
-        })
+        // DISABLED: This uses too much YouTube API quota
+        // transformedData.forEach(video => {
+        //   fetchRankForVideo(video.videoId, video.currentTitle)
+        //   fetchVideoStats(video.videoId)
+        // })
 
         // Fetch auto-optimization job statuses
         fetchAutoOptJobs(transformedData)
