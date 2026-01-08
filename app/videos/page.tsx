@@ -53,6 +53,8 @@ export default function VideosPage() {
   const [rankResult, setRankResult] = useState<{ videoId: string, rank: number | null, message: string } | null>(null)
   const [autoOptJobs, setAutoOptJobs] = useState<Map<string, AutoOptimizationJob>>(new Map())
   const [startingOpt, setStartingOpt] = useState<string | null>(null)
+  const [showIntervalModal, setShowIntervalModal] = useState<VideoData | null>(null)
+  const [selectedInterval, setSelectedInterval] = useState<number>(24) // hours
 
   // Fetch videos from Supabase on component mount
   useEffect(() => {
@@ -184,8 +186,9 @@ export default function VideosPage() {
   }
 
   // Start auto-optimization for a video
-  const startAutoOptimization = async (video: VideoData) => {
+  const startAutoOptimization = async (video: VideoData, intervalHours: number = 24) => {
     setStartingOpt(video.id)
+    setShowIntervalModal(null) // Close modal
     try {
       const response = await fetch('/api/auto-optimize', {
         method: 'POST',
@@ -193,7 +196,8 @@ export default function VideosPage() {
         body: JSON.stringify({
           videoUploadId: video.id,
           videoId: video.videoId,
-          currentRank: video.currentRank
+          currentRank: video.currentRank,
+          intervalHours
         })
       })
 
@@ -201,7 +205,10 @@ export default function VideosPage() {
       if (response.ok) {
         // Refresh jobs
         fetchAutoOptJobs([video])
-        alert('✅ Auto-optimization started! The system will check rank every 6 hours and optimize every 24 hours.')
+        const intervalText = intervalHours === 0 ? 'immediately' :
+          intervalHours === 12 ? 'every 12 hours' :
+            'every 24 hours'
+        alert(`✅ Auto-optimization started! The system will optimize ${intervalText}.`)
       } else {
         alert('❌ ' + (data.error || 'Failed to start auto-optimization'))
       }
@@ -733,7 +740,7 @@ export default function VideosPage() {
                   <div className="grid grid-cols-2 gap-2 mb-2">
                     {!autoOptJobs.get(video.id) ? (
                       <button
-                        onClick={() => startAutoOptimization(video)}
+                        onClick={() => setShowIntervalModal(video)}
                         disabled={startingOpt === video.id}
                         className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg transition-colors text-sm font-medium col-span-2"
                       >
@@ -833,6 +840,51 @@ export default function VideosPage() {
           videoTitle={selectedVideo.currentTitle}
           onClose={() => setSelectedVideo(null)}
         />
+      )}
+
+      {/* Optimization Interval Modal */}
+      {showIntervalModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl border border-gray-700 max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-2">Choose Optimization Interval</h3>
+            <p className="text-sm text-gray-400 mb-6">
+              How often should we optimize "{showIntervalModal.currentTitle}"?
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => startAutoOptimization(showIntervalModal, 0)}
+                className="w-full p-4 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 rounded-lg transition-all text-left"
+              >
+                <div className="font-bold text-lg">⚡ Optimize Now</div>
+                <div className="text-sm text-gray-200">Start optimization immediately</div>
+              </button>
+
+              <button
+                onClick={() => startAutoOptimization(showIntervalModal, 12)}
+                className="w-full p-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg transition-all text-left"
+              >
+                <div className="font-bold text-lg">🔄 Every 12 Hours</div>
+                <div className="text-sm text-gray-200">Optimize twice per day</div>
+              </button>
+
+              <button
+                onClick={() => startAutoOptimization(showIntervalModal, 24)}
+                className="w-full p-4 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 rounded-lg transition-all text-left"
+              >
+                <div className="font-bold text-lg">📅 Every 24 Hours</div>
+                <div className="text-sm text-gray-200">Optimize once per day (recommended)</div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowIntervalModal(null)}
+              className="mt-4 w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </main>
   )
