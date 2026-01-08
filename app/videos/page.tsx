@@ -127,7 +127,7 @@ export default function VideosPage() {
 
       const data = await response.json()
       if (response.ok && data.video) {
-        // Update video with statistics
+        // Update video with statistics AND real tags from YouTube
         setVideos(prevVideos =>
           prevVideos.map(v =>
             v.videoId === videoId
@@ -137,7 +137,9 @@ export default function VideosPage() {
                 likeCount: data.video.likeCount,
                 commentCount: data.video.commentCount,
                 duration: data.video.duration,
-                publishedAt: data.video.publishedAt
+                publishedAt: data.video.publishedAt,
+                currentTags: data.video.tags || v.currentTags, // Use real YouTube tags
+                currentTitle: data.video.title || v.currentTitle // Use real YouTube title
               }
               : v
           )
