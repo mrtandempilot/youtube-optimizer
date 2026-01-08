@@ -203,20 +203,39 @@ export default function VideosPage() {
                 My Videos
               </h1>
             </div>
-            <Link
-              href="/"
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700"
-            >
-              <Home size={18} />
-              <span>Home</span>
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSyncYouTube}
+                disabled={syncing}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded-lg transition-colors border border-red-500"
+              >
+                {syncing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Syncing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Video size={18} />
+                    <span>Sync YouTube</span>
+                  </>
+                )}
+              </button>
+              <Link
+                href="/"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700"
+              >
+                <Home size={18} />
+                <span>Home</span>
+              </Link>
+            </div>
           </div>
 
           {/* Sync Message */}
           {syncMessage && (
             <div className={`mb-4 p-3 rounded-lg ${syncMessage.includes('✅') ? 'bg-green-500/20 border border-green-500/30 text-green-300' :
-                syncMessage.includes('❌') ? 'bg-red-500/20 border border-red-500/30 text-red-300' :
-                  'bg-blue-500/20 border border-blue-500/30 text-blue-300'
+              syncMessage.includes('❌') ? 'bg-red-500/20 border border-red-500/30 text-red-300' :
+                'bg-blue-500/20 border border-blue-500/30 text-blue-300'
               }`}>
               {syncMessage}
             </div>
