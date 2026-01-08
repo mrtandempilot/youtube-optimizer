@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Search, TrendingUp, Tags, Users, Lightbulb, Copy, CheckCircle, Video } from 'lucide-react'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
 
 interface OptimizationResult {
   competitors: Array<{
@@ -23,12 +24,60 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<OptimizationResult | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+
+  // Extract video ID from YouTube URL
+  const extractVideoId = (url: string): string | null => {
+    if (!url) return null
+    const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/
+    const match = url.match(regex)
+    return match ? match[1] : null
+  }
+
+  // Save optimization result to Supabase
+  const saveToDatabase = async (optimizationResult: OptimizationResult) => {
+    try {
+      setSaveStatus('saving')
+
+      const videoId = extractVideoId(videoUrl) || `temp_${Date.now()}`
+      const thumbnailUrl = videoId.startsWith('temp_')
+        ? `https://via.placeholder.com/320x180/1f2937/ffffff?text=${encodeURIComponent(topic)}`
+        : `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`
+
+      const { data, error } = await supabase
+        .from('video_uploads')
+        .upsert({
+          video_id: videoId,
+          topic: topic,
+          current_title: optimizationResult.titles[0], // Use first generated title
+          current_tags: optimizationResult.tags,
+          seo_score: optimizationResult.seoScore,
+          target_rank: 5,
+          optimization_count: 1,
+          thumbnail_url: thumbnailUrl,
+          last_optimized: new Date().toISOString(),
+          created_at: new Date().toISOString()
+        }, {
+          onConflict: 'video_id'
+        })
+
+      if (error) throw error
+
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    } catch (error) {
+      console.error('Failed to save to database:', error)
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    }
+  }
 
   const handleOptimize = async () => {
     if (!topic.trim()) return
 
     setLoading(true)
     setResult(null) // Clear previous results
+    setSaveStatus('idle')
     try {
       const response = await fetch('/api/optimize', {
         method: 'POST',
@@ -43,6 +92,9 @@ export default function Home() {
       }
 
       setResult(data)
+
+      // Automatically save to database after successful optimization
+      await saveToDatabase(data)
     } catch (error) {
       console.error('Optimization failed:', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to optimize'
@@ -129,6 +181,30 @@ export default function Home() {
                 </>
               )}
             </button>
+
+            {/* Save Status Notification */}
+            {saveStatus !== 'idle' && (
+              <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${saveStatus === 'saved' ? 'bg-green-500/20 border border-green-500/30 text-green-300' :
+                  saveStatus === 'saving' ? 'bg-blue-500/20 border border-blue-500/30 text-blue-300' :
+                    'bg-red-500/20 border border-red-500/30 text-red-300'
+                }`}>
+                {saveStatus === 'saved' && (
+                  <>
+                    <CheckCircle size={18} />
+                    <span>✅ Saved to My Videos!</span>
+                  </>
+                )}
+                {saveStatus === 'saving' && (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-300"></div>
+                    <span>Saving to database...</span>
+                  </>
+                )}
+                {saveStatus === 'error' && (
+                  <span>⚠️ Failed to save to database</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
