@@ -27,6 +27,15 @@ interface VideoData {
   publishedAt?: string
 }
 
+interface AutoOptimizationJob {
+  id: string
+  status: string
+  baseline_rank: number | null
+  current_rank: number | null
+  last_optimization: string | null
+  next_optimization: string | null
+}
+
 type FilterType = 'all' | 'high-score' | 'needs-optimization'
 type SortType = 'recent' | 'seo-score' | 'rank'
 
@@ -42,6 +51,8 @@ export default function VideosPage() {
   const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null)
   const [analyzingRank, setAnalyzingRank] = useState<string | null>(null)
   const [rankResult, setRankResult] = useState<{ videoId: string, rank: number | null, message: string } | null>(null)
+  const [autoOptJobs, setAutoOptJobs] = useState<Map<string, AutoOptimizationJob>>(new Map())
+  const [startingOpt, setStartingOpt] = useState<string | null>(null)
 
   // Fetch videos from Supabase on component mount
   useEffect(() => {
@@ -80,6 +91,9 @@ export default function VideosPage() {
           fetchRankForVideo(video.videoId, video.currentTitle)
           fetchVideoStats(video.videoId)
         })
+
+        // Fetch auto-optimization job statuses
+        fetchAutoOptJobs(transformedData)
       } catch (err) {
         console.error('Error fetching videos:', err)
         setError(err instanceof Error ? err.message : 'Failed to load videos')
@@ -147,6 +161,82 @@ export default function VideosPage() {
       }
     } catch (error) {
       console.error(`Error fetching stats for ${videoId}:`, error)
+    }
+  }
+
+  // Fetch auto-optimization jobs for all videos
+  const fetchAutoOptJobs = async (videosList: VideoData[]) => {
+    const jobsMap = new Map<string, AutoOptimizationJob>()
+
+    for (const video of videosList) {
+      try {
+        const response = await fetch(`/api/auto-optimize?videoUploadId=${video.id}`)
+        const data = await response.json()
+        if (data.job) {
+          jobsMap.set(video.id, data.job)
+        }
+      } catch (error) {
+        console.error(`Error fetching job for ${video.id}:`, error)
+      }
+    }
+
+    setAutoOptJobs(jobsMap)
+  }
+
+  // Start auto-optimization for a video
+  const startAutoOptimization = async (video: VideoData) => {
+    setStartingOpt(video.id)
+    try {
+      const response = await fetch('/api/auto-optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoUploadId: video.id,
+          videoId: video.videoId,
+          currentRank: video.currentRank
+        })
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        // Refresh jobs
+        fetchAutoOptJobs([video])
+        alert('✅ Auto-optimization started! The system will check rank every 6 hours and optimize every 24 hours.')
+      } else {
+        alert('❌ ' + (data.error || 'Failed to start auto-optimization'))
+      }
+    } catch (error) {
+      console.error('Error starting auto-optimization:', error)
+      alert('❌ Failed to start auto-optimization')
+    } finally {
+      setStartingOpt(null)
+    }
+  }
+
+  // Stop auto-optimization
+  const stopAutoOptimization = async (videoId: string) => {
+    try {
+      const response = await fetch('/api/auto-optimize', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoUploadId: videoId })
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        // Remove from map
+        setAutoOptJobs(prev => {
+          const newMap = new Map(prev)
+          newMap.delete(videoId)
+          return newMap
+        })
+        alert('🛑 Auto-optimization stopped')
+      } else {
+        alert('❌ ' + (data.error || 'Failed to stop auto-optimization'))
+      }
+    } catch (error) {
+      console.error('Error stopping auto-optimization:', error)
+      alert('❌ Failed to stop auto-optimization')
     }
   }
 
@@ -614,8 +704,51 @@ export default function VideosPage() {
                     </div>
                   </div>
 
+                  {/* Auto-Optimization Status */}
+                  {autoOptJobs.get(video.id) && (
+                    <div className="mb-3 p-3 bg-gradient-to-r from-green-500/20 to-blue-500/20 border border-green-500/30 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="animate-pulse w-2 h-2 bg-green-400 rounded-full"></div>
+                            <span className="text-sm font-bold text-green-300">🤖 Auto-Optimizing</span>
+                          </div>
+                          <div className="text-xs text-gray-300">
+                            Rank: #{autoOptJobs.get(video.id)!.baseline_rank} → #{autoOptJobs.get(video.id)!.current_rank || '?'}
+                            {autoOptJobs.get(video.id)!.current_rank && autoOptJobs.get(video.id)!.baseline_rank &&
+                              autoOptJobs.get(video.id)!.current_rank! < autoOptJobs.get(video.id)!.baseline_rank! && ' ✅'}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => stopAutoOptimization(video.id)}
+                          className="px-3 py-1 bg-red-500/20 hover:bg-red-500/40 border border-red-500/50 rounded text-xs text-red-300"
+                        >
+                          Stop
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="grid grid-cols-2 gap-2 mb-2">
+                    {!autoOptJobs.get(video.id) ? (
+                      <button
+                        onClick={() => startAutoOptimization(video)}
+                        disabled={startingOpt === video.id}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg transition-colors text-sm font-medium col-span-2"
+                      >
+                        {startingOpt === video.id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Starting...
+                          </>
+                        ) : (
+                          <>
+                            ✨ Start Auto-Optimization
+                          </>
+                        )}
+                      </button>
+                    ) : null}
                     <button
                       onClick={() => analyzeRank(video.videoId, video.currentTitle)}
                       disabled={analyzingRank === video.videoId}
