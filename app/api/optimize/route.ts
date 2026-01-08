@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 })
     }
 
-    // Parallel AI calls with specialized models
+    // Parallel AI calls with Grok (fast and free!)
     const [competitorAnalysis, titleGeneration, tagGeneration] = await Promise.all([
-      // Competitor Analysis - Claude for deep reasoning
+      // Competitor Analysis
       callOpenRouter(
         `Analyze the YouTube niche for "${topic}". Identify the top 5 competitors in this space. For each competitor provide:
 - Channel name
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
 - Key strength
 
 Return the response as a JSON array with objects containing: name, subscribers, strategy, strength.`,
-        'anthropic/claude-3.5-sonnet'
+        'x-ai/grok-beta'
       ),
 
-      // Title Generation - GPT-4o for creative writing
+      // Title Generation
       callOpenRouter(
         `Generate 5 highly optimized YouTube video titles for the topic: "${topic}".
         
@@ -78,10 +78,10 @@ Requirements:
 - Include power words that drive clicks
 
 Return only a JSON array of title strings.`,
-        'openai/gpt-4o'
+        'x-ai/grok-beta'
       ),
 
-      // Tag Generation - Efficient model for structured categorization
+      // Tag Generation
       callOpenRouter(
         `Generate 20 YouTube tags for a video about: "${topic}".
         
@@ -91,7 +91,7 @@ Include:
 - 5 long-tail, niche tags
 
 Return only a JSON array of tag strings (no hashtags, just words/phrases).`,
-        'openai/gpt-4o-mini'
+        'x-ai/grok-beta'
       ),
     ])
 
@@ -167,11 +167,11 @@ Return only a JSON array of tag strings (no hashtags, just words/phrases).`,
     })
   } catch (error) {
     console.error('Optimization error:', error)
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Failed to generate optimization'
-    
+
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
         details: 'Please check that OPENROUTER_API_KEY is set and you have credits in your account'
       },
