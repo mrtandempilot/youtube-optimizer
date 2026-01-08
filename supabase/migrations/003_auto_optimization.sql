@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS rank_history (
   checked_at TIMESTAMP DEFAULT NOW()
 );
 
--- Indexes for performance
+-- Indexes for performance (created AFTER tables exist)
 CREATE INDEX IF NOT EXISTS idx_auto_jobs_video ON auto_optimization_jobs(video_upload_id);
 CREATE INDEX IF NOT EXISTS idx_auto_jobs_status ON auto_optimization_jobs(status);
 CREATE INDEX IF NOT EXISTS idx_opt_history_job ON optimization_history(job_id);
