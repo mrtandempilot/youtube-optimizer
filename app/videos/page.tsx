@@ -68,6 +68,11 @@ export default function VideosPage() {
         }))
 
         setVideos(transformedData)
+
+        // Automatically fetch ranks for all videos
+        transformedData.forEach(video => {
+          fetchRankForVideo(video.videoId, video.currentTitle)
+        })
       } catch (err) {
         console.error('Error fetching videos:', err)
         setError(err instanceof Error ? err.message : 'Failed to load videos')
@@ -78,6 +83,31 @@ export default function VideosPage() {
 
     fetchVideos()
   }, [])
+
+  // Fetch rank for a single video and update state
+  const fetchRankForVideo = async (videoId: string, title: string) => {
+    try {
+      const response = await fetch('/api/analyze-rank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId, title })
+      })
+
+      const data = await response.json()
+      if (response.ok && data.rank) {
+        // Update the video's rank in state
+        setVideos(prevVideos =>
+          prevVideos.map(v =>
+            v.videoId === videoId
+              ? { ...v, currentRank: data.rank }
+              : v
+          )
+        )
+      }
+    } catch (error) {
+      console.error(`Error fetching rank for ${videoId}:`, error)
+    }
+  }
 
   // Handle YouTube connection
   const handleConnectYouTube = async () => {
