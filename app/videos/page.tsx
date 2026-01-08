@@ -19,6 +19,12 @@ interface VideoData {
   lastOptimized: string
   createdAt: string
   thumbnailUrl: string
+  // YouTube statistics
+  viewCount?: number
+  likeCount?: number
+  commentCount?: number
+  duration?: string
+  publishedAt?: string
 }
 
 type FilterType = 'all' | 'high-score' | 'needs-optimization'
@@ -69,9 +75,10 @@ export default function VideosPage() {
 
         setVideos(transformedData)
 
-        // Automatically fetch ranks for all videos
+        // Automatically fetch ranks and stats for all videos
         transformedData.forEach(video => {
           fetchRankForVideo(video.videoId, video.currentTitle)
+          fetchVideoStats(video.videoId)
         })
       } catch (err) {
         console.error('Error fetching videos:', err)
@@ -106,6 +113,38 @@ export default function VideosPage() {
       }
     } catch (error) {
       console.error(`Error fetching rank for ${videoId}:`, error)
+    }
+  }
+
+  // Fetch complete video statistics
+  const fetchVideoStats = async (videoId: string) => {
+    try {
+      const response = await fetch('/api/video-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId })
+      })
+
+      const data = await response.json()
+      if (response.ok && data.video) {
+        // Update video with statistics
+        setVideos(prevVideos =>
+          prevVideos.map(v =>
+            v.videoId === videoId
+              ? {
+                ...v,
+                viewCount: data.video.viewCount,
+                likeCount: data.video.likeCount,
+                commentCount: data.video.commentCount,
+                duration: data.video.duration,
+                publishedAt: data.video.publishedAt
+              }
+              : v
+          )
+        )
+      }
+    } catch (error) {
+      console.error(`Error fetching stats for ${videoId}:`, error)
     }
   }
 
@@ -528,6 +567,38 @@ export default function VideosPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* YouTube Statistics */}
+                  {(video.viewCount || video.likeCount || video.duration) && (
+                    <div className="mb-4 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {video.viewCount !== undefined && (
+                          <div>
+                            <span className="text-gray-400">Views:</span>
+                            <span className="ml-2 font-bold text-white">{video.viewCount.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {video.likeCount !== undefined && (
+                          <div>
+                            <span className="text-gray-400">Likes:</span>
+                            <span className="ml-2 font-bold text-green-400">{video.likeCount.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {video.commentCount !== undefined && (
+                          <div>
+                            <span className="text-gray-400">Comments:</span>
+                            <span className="ml-2 font-bold text-blue-400">{video.commentCount.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {video.duration && (
+                          <div>
+                            <span className="text-gray-400">Duration:</span>
+                            <span className="ml-2 font-bold text-purple-400">{video.duration}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Stats */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
