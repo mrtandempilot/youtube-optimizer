@@ -211,6 +211,17 @@ export default function VideosPage() {
               <span>Home</span>
             </Link>
           </div>
+
+          {/* Sync Message */}
+          {syncMessage && (
+            <div className={`mb-4 p-3 rounded-lg ${syncMessage.includes('✅') ? 'bg-green-500/20 border border-green-500/30 text-green-300' :
+                syncMessage.includes('❌') ? 'bg-red-500/20 border border-red-500/30 text-red-300' :
+                  'bg-blue-500/20 border border-blue-500/30 text-blue-300'
+              }`}>
+              {syncMessage}
+            </div>
+          )}
+
           <p className="text-gray-400">
             Track your optimized videos and their SEO performance
           </p>
