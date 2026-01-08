@@ -34,6 +34,8 @@ export default function VideosPage() {
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
   const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null)
+  const [analyzingRank, setAnalyzingRank] = useState<string | null>(null)
+  const [rankResult, setRankResult] = useState<{ videoId: string, rank: number | null, message: string } | null>(null)
 
   // Fetch videos from Supabase on component mount
   useEffect(() => {
@@ -137,6 +139,32 @@ export default function VideosPage() {
       setTimeout(() => setSyncMessage(null), 5000)
     } finally {
       setSyncing(false)
+    }
+  }
+
+  // Analyze video rank by title
+  const analyzeRank = async (videoId: string, title: string) => {
+    setAnalyzingRank(videoId)
+    setRankResult(null)
+    try {
+      const response = await fetch('/api/analyze-rank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId, title })
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        setRankResult({ videoId, rank: data.rank, message: data.message })
+        setTimeout(() => setRankResult(null), 10000) // Clear after 10 seconds
+      } else {
+        alert(data.error || 'Failed to analyze rank')
+      }
+    } catch (error) {
+      console.error('Error analyzing rank:', error)
+      alert('Failed to analyze rank')
+    } finally {
+      setAnalyzingRank(null)
     }
   }
 
@@ -428,6 +456,26 @@ export default function VideosPage() {
                     {video.currentTitle}
                   </h3>
 
+                  {/* Rank Result */}
+                  {rankResult && rankResult.videoId === video.videoId && (
+                    <div className={`mb-3 p-3 rounded-lg ${rankResult.rank && rankResult.rank <= 10
+                      ? 'bg-green-500/20 border border-green-500/30'
+                      : rankResult.rank
+                        ? 'bg-yellow-500/20 border border-yellow-500/30'
+                        : 'bg-red-500/20 border border-red-500/30'
+                      }`}>
+                      <div className="flex items-center gap-2">
+                        {rankResult.rank && (
+                          <span className={`text-2xl font-bold ${rankResult.rank <= 10 ? 'text-green-400' : 'text-yellow-400'
+                            }`}>
+                            #{rankResult.rank}
+                          </span>
+                        )}
+                        <span className="text-sm text-gray-300">{rankResult.message}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Tags */}
                   <div className="mb-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -464,14 +512,33 @@ export default function VideosPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <button
+                      onClick={() => analyzeRank(video.videoId, video.currentTitle)}
+                      disabled={analyzingRank === video.videoId}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      {analyzingRank === video.videoId ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <TrendingUp size={16} />
+                          Analyze Rank
+                        </>
+                      )}
+                    </button>
                     <button
                       onClick={() => setSelectedVideo(video)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm"
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm"
                     >
                       <Target size={16} />
                       Keywords
                     </button>
+                  </div>
+                  <div className="flex gap-2">
                     <button
                       onClick={() => copyToClipboard(video.currentTitle, `title-${video.id}`)}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-sm"
