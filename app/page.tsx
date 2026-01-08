@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, TrendingUp, Tags, Users, Lightbulb, Copy, CheckCircle } from 'lucide-react'
+import { Search, TrendingUp, Tags, Users, Lightbulb, Copy, CheckCircle, Video } from 'lucide-react'
+import Link from 'next/link'
 
 interface OptimizationResult {
   competitors: Array<{
@@ -35,12 +36,12 @@ export default function Home() {
         body: JSON.stringify({ topic, videoUrl }),
       })
       const data = await response.json()
-      
+
       // Check if API returned an error
       if (!response.ok || data.error) {
         throw new Error(data.error || data.details || 'Failed to generate optimization')
       }
-      
+
       setResult(data)
     } catch (error) {
       console.error('Optimization failed:', error)
@@ -61,13 +62,27 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
-            YouTube SEO Optimizer
-          </h1>
-          <p className="text-gray-400 text-lg">
-            AI-powered title, tags, and competitor analysis for maximum visibility
-          </p>
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex-1"></div>
+            <div className="text-center flex-1">
+              <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
+                YouTube SEO Optimizer
+              </h1>
+              <p className="text-gray-400 text-lg">
+                AI-powered title, tags, and competitor analysis for maximum visibility
+              </p>
+            </div>
+            <div className="flex-1 flex justify-end">
+              <Link
+                href="/videos"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700"
+              >
+                <Video size={18} />
+                <span>My Videos</span>
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* Input Section */}
