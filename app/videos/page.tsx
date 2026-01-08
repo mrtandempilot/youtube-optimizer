@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Video, TrendingUp, Tags, Calendar, Copy, CheckCircle, ExternalLink, Filter, ArrowUpDown, Home } from 'lucide-react'
+import { Video, TrendingUp, Tags, Calendar, Copy, CheckCircle, ExternalLink, Filter, ArrowUpDown, Home, Target } from 'lucide-react'
 import Link from 'next/link'
 import { supabase, VideoUpload } from '@/lib/supabase'
+import KeywordModal from './KeywordModal'
 
 interface VideoData {
   id: string
@@ -32,6 +33,7 @@ export default function VideosPage() {
   const [copied, setCopied] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
+  const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null)
 
   // Fetch videos from Supabase on component mount
   useEffect(() => {
@@ -464,6 +466,13 @@ export default function VideosPage() {
                   {/* Actions */}
                   <div className="flex gap-2">
                     <button
+                      onClick={() => setSelectedVideo(video)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm"
+                    >
+                      <Target size={16} />
+                      Keywords
+                    </button>
+                    <button
                       onClick={() => copyToClipboard(video.currentTitle, `title-${video.id}`)}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-sm"
                     >
@@ -475,7 +484,7 @@ export default function VideosPage() {
                       ) : (
                         <>
                           <Copy size={16} />
-                          Copy Title
+                          Copy
                         </>
                       )}
                     </button>
@@ -512,6 +521,16 @@ export default function VideosPage() {
           </div>
         )}
       </div>
+
+      {/* Keyword Modal */}
+      {selectedVideo && (
+        <KeywordModal
+          videoId={selectedVideo.videoId}
+          videoUploadId={selectedVideo.id}
+          videoTitle={selectedVideo.currentTitle}
+          onClose={() => setSelectedVideo(null)}
+        />
+      )}
     </main>
   )
 }
