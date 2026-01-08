@@ -30,6 +30,8 @@ export default function VideosPage() {
   const [filter, setFilter] = useState<FilterType>('all')
   const [sort, setSort] = useState<SortType>('recent')
   const [copied, setCopied] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
   // Fetch videos from Supabase on component mount
   useEffect(() => {
@@ -72,6 +74,69 @@ export default function VideosPage() {
 
     fetchVideos()
   }, [])
+
+  // Handle YouTube connection
+  const handleConnectYouTube = async () => {
+    try {
+      const response = await fetch('/api/youtube/auth')
+      const data = await response.json()
+      if (data.authUrl) {
+        window.location.href = data.authUrl
+      }
+    } catch (error) {
+      console.error('Error connecting to YouTube:', error)
+      alert('Failed to connect to YouTube')
+    }
+  }
+
+  // Handle YouTube sync
+  const handleSyncYouTube = async () => {
+    try {
+      setSyncing(true)
+      setSyncMessage('Syncing your YouTube videos...')
+
+      const response = await fetch('/api/youtube/sync', { method: 'POST' })
+      const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      setSyncMessage(`✅ Synced ${data.syncedCount} videos!`)
+
+      // Refresh videos list
+      const { data: refreshedData } = await supabase
+        .from('video_uploads')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (refreshedData) {
+        const transformedData: VideoData[] = refreshedData.map((video: VideoUpload) => ({
+          id: video.id,
+          videoId: video.video_id,
+          topic: video.topic,
+          currentTitle: video.current_title,
+          currentTags: video.current_tags || [],
+          seoScore: video.seo_score,
+          currentRank: video.current_rank,
+          targetRank: video.target_rank,
+          optimizationCount: video.optimization_count,
+          lastOptimized: video.last_optimized,
+          createdAt: video.created_at,
+          thumbnailUrl: video.thumbnail_url || `https://i.ytimg.com/vi/${video.video_id}/mqdefault.jpg`
+        }))
+        setVideos(transformedData)
+      }
+
+      setTimeout(() => setSyncMessage(null), 5000)
+    } catch (error) {
+      console.error('Error syncing YouTube videos:', error)
+      setSyncMessage('❌ Failed to sync videos')
+      setTimeout(() => setSyncMessage(null), 5000)
+    } finally {
+      setSyncing(false)
+    }
+  }
 
 
   const copyToClipboard = (text: string, id: string) => {
